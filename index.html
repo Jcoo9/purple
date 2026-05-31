@@ -4905,18 +4905,21 @@ function updateUserStrip(user){
 
 // SYNC profile to Supabase profiles table
 async function syncUserProfile(user){
-  if(!uProfile || uProfile.skipped) return;
   try{
-    await sb.from('user_profiles').upsert({
+    const profileData = {
       user_id: user.id,
       email: user.email,
-      state: uProfile.state || null,
-      age_range: uProfile.age || null,
-      background: uProfile.bg || null,
-      community: uProfile.com || null,
-      name: localStorage.getItem('pname') || null,
       updated_at: new Date().toISOString()
-    }, {onConflict: 'user_id'});
+    };
+    const savedName = localStorage.getItem('pname');
+    if(savedName) profileData.name = savedName;
+    if(uProfile && !uProfile.skipped){
+      if(uProfile.state) profileData.state = uProfile.state;
+      if(uProfile.age) profileData.age_range = uProfile.age;
+      if(uProfile.bg) profileData.background = uProfile.bg;
+      if(uProfile.com) profileData.community = uProfile.com;
+    }
+    await sb.from('user_profiles').upsert(profileData, {onConflict: 'user_id'});
   }catch(e){console.log('Profile sync:', e.message);}
 }
 
