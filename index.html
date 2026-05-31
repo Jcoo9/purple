@@ -4834,7 +4834,6 @@ let currentUser = null;
 
 async function initAuth(){
   // Always start clean - Supabase is source of truth
-  localStorage.removeItem('pv3');
   uVotes={};
 
   // Check existing session first and load votes
