@@ -4834,7 +4834,7 @@ let currentUser = null;
 
 async function initAuth(){
   // Always start clean - Supabase is source of truth
-  uVotes={};
+
 
   // Check existing session first and load votes
   const {data:{session}} = await sb.auth.getSession();
