@@ -4867,7 +4867,6 @@ async function onUserSignedIn(user){
     const {data:dbVotes}=await sb.from('user_votes').select('topic_id,vote_option').eq('user_id',user.id);
     if(dbVotes){
       // Start fresh from database — don't merge with localStorage
-      uVotes={};
       dbVotes.forEach(v=>{uVotes[v.topic_id]=v.vote_option;});
       localStorage.setItem('pv3',JSON.stringify(uVotes));
       console.log(`Loaded ${dbVotes.length} votes from Supabase`);
