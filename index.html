@@ -2282,7 +2282,7 @@ async function renderLbVoters(el){
     (votes||[]).forEach(v=>{voteCounts[v.user_id]=(voteCounts[v.user_id]||0)+1;});
     const myId=currentUser?.id;
     const voters=profiles.map(p=>({
-      name:p.name||p.email?.split('@')[0]||'Anonymous',
+      name:p.name||(p.email?p.email.split('@')[0]:null)||'Anonymous',
       state:p.state||'',
       votes:voteCounts[p.user_id]||0,
       user_id:p.user_id
