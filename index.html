@@ -11,6 +11,12 @@
   gtag('config', 'G-GGXNH132QJ');
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<link rel="manifest" href="/manifest.json"/>
+<meta name="theme-color" content="#141210"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Purple"/>
+<link rel="apple-touch-icon" href="/icon-192.png"/>
 <meta name="screen-orientation" content="portrait"/>
 <meta name="x5-orientation" content="portrait"/>
 <title>Purple &#8212; The Real Pulse <!-- v2.1 --></title>
@@ -1302,6 +1308,26 @@ let swipeTopicId=null;
 
 // INIT
 async function init(){
+  // Attribution: track publisher referral from widget CTA
+  const _urlP=new URLSearchParams(window.location.search);
+  const _ref=_urlP.get('ref');
+  const _refTopic=_urlP.get('topic');
+  if(_ref){
+    localStorage.setItem('purple_ref',_ref);
+    localStorage.setItem('purple_ref_time',Date.now().toString());
+    try{
+      fetch('https://snwvxdbgbvloubyphmtw.supabase.co/rest/v1/widget_votes',{
+        method:'POST',
+        headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNud3Z4ZGJnYnZsb3VieXBobXR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3NTM1NTMsImV4cCI6MjA2MDMyOTU1M30.TV_-5S3PW_ECTFL7qCMcOL7NBSJTQNuMy6RhM0FLBB8','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNud3Z4ZGJnYnZsb3VieXBobXR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3NTM1NTMsImV4cCI6MjA2MDMyOTU1M30.TV_-5S3PW_ECTFL7qCMcOL7NBSJTQNuMy6RhM0FLBB8','Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({topic_id:_refTopic||null,vote_option:'referral_click',publisher:_ref,referrer:document.referrer,voted_at:new Date().toISOString()})
+      });
+    }catch(e){}
+    if(_refTopic)window._refTopic=_refTopic;
+    window.history.replaceState({},'',window.location.pathname);
+  }
+  // Deep link: ?q=topicId from shared result card
+  const _qParam=_urlP.get('q');
+  if(_qParam&&!window._refTopic){window._refTopic=_qParam;window.history.replaceState({},'',window.location.pathname);}
   try{
     const {data:td}=await sb.from('topics').select('*').eq('status','live').order('created_at',{ascending:false});
     allTopics=td||[];
@@ -1445,6 +1471,12 @@ function buildQueue(){
     });
   // Filter out already-voted topics — prevents repeats entirely
   queue = queue.filter(t => !uVotes[t.id]);
+  // If user arrived from widget with a specific topic, put it first
+  if(window._refTopic){
+    const refIdx=queue.findIndex(t=>t.id===window._refTopic);
+    if(refIdx>0){const t=queue.splice(refIdx,1)[0];queue.unshift(t);}
+    window._refTopic=null;
+  }
   curIdx=0;
   renderStack();
   updateProgress();
@@ -1959,8 +1991,12 @@ async function vote(topicId,optId){
 
   // Save vote to Supabase user_votes so it persists across devices/sessions
   if(currentUser){
+    const ref=localStorage.getItem('purple_ref');
+    const refTime=parseInt(localStorage.getItem('purple_ref_time')||'0');
+    // Attribution window: 24 hours
+    const fromWidget=ref&&(Date.now()-refTime<86400000);
     sb.from('user_votes').upsert(
-      {user_id:currentUser.id, topic_id:topicId, vote_option:optId},
+      {user_id:currentUser.id, topic_id:topicId, vote_option:optId, publisher_ref:fromWidget?ref:null},
       {onConflict:'user_id,topic_id'}
     ).then(({error})=>{
       if(error)console.error('Vote save failed:',error.message);
@@ -4164,7 +4200,8 @@ function shareApp(){
 function shareQuestion(topicId){
   const t=allTopics.find(x=>x.id===topicId);if(!t)return;
   const tot=tv(t);
-  const txt=`I want to know what you think:\n\n"${t.question}"\n\nVote and see what ${tot>0?tot+' other people said':'real Americans think'}:\npurple-poll.com\n\n(Results only show after you vote -- no peeking!)`;
+  const deepLink='https://purple-poll.com?q='+topicId;
+  const txt=`I want to know what you think:\n\n"${t.question}"\n\nVote and see what ${tot>0?tot+' other people said':'real Americans think'}:\n${deepLink}\n\n(Results only show after you vote -- no peeking!)`;
   if(navigator.share)navigator.share({title:'What do you think?',text:txt,url:'https://purple-poll.com'});
   else navigator.clipboard.writeText(txt).then(()=>toast('Copied! Send it and ask what they think. 💜'));
 }

@@ -1,0 +1,41 @@
+{
+  "name": "Purple",
+  "short_name": "Purple",
+  "description": "Not left. Not right. Real. Civic polling for Americans.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f4ef",
+  "theme_color": "#141210",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["news", "politics", "social"],
+  "shortcuts": [
+    {
+      "name": "Vote Now",
+      "short_name": "Vote",
+      "description": "Jump straight to voting",
+      "url": "/?shortcut=vote",
+      "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "Leaderboard",
+      "short_name": "Leaders",
+      "description": "See how America is thinking",
+      "url": "/?shortcut=leaders",
+      "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]
+    }
+  ]
+}
