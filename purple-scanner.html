@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Purple — Comment Scanner</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Georgia,serif;background:#f7f4ef;color:#141210;max-width:800px;margin:0 auto;padding:24px}
+h1{font-size:32px;font-weight:900;margin-bottom:4px}
+.sub{font-family:monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#7a736a;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #141210}
+.card{border:1px solid #d4cdc2;padding:16px;margin-bottom:12px;background:#fff}
+.card-hed{font-size:15px;font-weight:700;margin-bottom:8px;line-height:1.4}
+.card-meta{font-family:monospace;font-size:8px;color:#7a736a;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.08em}
+.card-debate{font-size:13px;font-style:italic;color:#5a5450;margin-bottom:12px;line-height:1.6;border-left:3px solid #d4cdc2;padding-left:10px}
+.purple-q{background:#141210;color:#f7f4ef;padding:12px 14px;margin-bottom:10px;font-size:14px;font-weight:700;line-height:1.4}
+.comment-draft{background:#eeeae3;padding:10px 12px;font-size:12px;font-family:monospace;line-height:1.6;margin-bottom:10px;word-break:break-all}
+.btn{background:#141210;color:#f7f4ef;border:none;padding:8px 14px;cursor:pointer;font-family:monospace;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;margin-right:6px}
+.btn.sec{background:transparent;color:#141210;border:1px solid #141210}
+.btn:hover{opacity:0.85}
+input,select{width:100%;border:2px solid #141210;padding:10px 12px;font-family:Georgia,serif;font-size:14px;background:#fff;color:#141210;margin-bottom:8px;outline:none}
+label{font-family:monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#7a736a;display:block;margin-bottom:4px}
+.loading{text-align:center;padding:32px;font-family:monospace;font-size:9px;color:#7a736a;text-transform:uppercase;letter-spacing:0.1em}
+.error{color:#c62828;font-family:monospace;font-size:9px}
+.copied{color:#1565c0;font-family:monospace;font-size:9px}
+#results{margin-top:20px}
+.tag{display:inline-block;background:#141210;color:#f7f4ef;font-family:monospace;font-size:7px;padding:2px 6px;margin-right:4px}
+</style>
+</head>
+<body>
+<h1>Purple Scanner</h1>
+<div class="sub">Find heated debates · Generate Purple questions · Drive traffic back</div>
+
+<div style="border:2px solid #141210;padding:16px;margin-bottom:20px">
+  <label>Search Reddit for debates</label>
+  <input type="text" id="search-input" placeholder="e.g. immigration, gun control, healthcare, taxes" value=""/>
+  
+  <label>Subreddit (optional)</label>
+  <select id="subreddit-select">
+    <option value="all">r/all — everywhere</option>
+    <option value="politics">r/politics</option>
+    <option value="news">r/news</option>
+    <option value="worldnews">r/worldnews</option>
+    <option value="AmericanPolitics">r/AmericanPolitics</option>
+    <option value="Conservative">r/Conservative</option>
+    <option value="liberal">r/liberal</option>
+    <option value="NJpolitics">r/NJpolitics</option>
+    <option value="newjersey">r/newjersey</option>
+  </select>
+
+  <button class="btn" onclick="scan()">Scan for Debates →</button>
+</div>
+
+<div id="results"></div>
+
+<script>
+async function scan(){
+  const q = document.getElementById('search-input').value.trim();
+  const sub = document.getElementById('subreddit-select').value;
+  if(!q){alert('Enter a topic to search');return;}
+
+  document.getElementById('results').innerHTML = '<div class="loading">Scanning Reddit for heated debates...</div>';
+
+  try{
+    // Fetch from Reddit JSON API
+    const url = sub === 'all'
+      ? `https://www.reddit.com/search.json?q=${encodeURIComponent(q)}&sort=hot&limit=10&t=week`
+      : `https://www.reddit.com/r/${sub}/search.json?q=${encodeURIComponent(q)}&sort=hot&limit=10&restrict_sr=1&t=week`;
+
+    const res = await fetch(url, {headers:{'Accept':'application/json'}});
+    if(!res.ok) throw new Error('Reddit API error: ' + res.status);
+    const data = await res.json();
+    const posts = data?.data?.children?.map(c=>c.data) || [];
+
+    if(!posts.length){
+      document.getElementById('results').innerHTML = '<div class="loading">No posts found. Try different keywords.</div>';
+      return;
+    }
+
+    // Filter for posts with significant engagement
+    const hotPosts = posts
+      .filter(p => p.num_comments > 20 && !p.stickied)
+      .sort((a,b) => b.num_comments - a.num_comments)
+      .slice(0,5);
+
+    document.getElementById('results').innerHTML = '<div class="loading">Generating Purple questions via AI...</div>';
+
+    // Generate Purple questions for each post
+    const cards = await Promise.all(hotPosts.map(p => generateCard(p)));
+    document.getElementById('results').innerHTML = cards.join('');
+
+  }catch(e){
+    document.getElementById('results').innerHTML = '<div class="error">Error: '+e.message+'<br><br>Reddit may be blocking the request. Try a different search.</div>';
+  }
+}
+
+async function generateCard(post){
+  const topicSummary = post.title + (post.selftext ? ' — ' + post.selftext.slice(0,300) : '');
+
+  try{
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 400,
+        system: 'You generate civic poll questions for Purple (purple-poll.com). Output only valid JSON, no markdown.',
+        messages:[{role:'user', content:`From this Reddit post, generate a Purple civic poll question and a comment to post.
+
+Reddit post title: "${post.title}"
+Subreddit: r/${post.subreddit}
+Comments: ${post.num_comments}
+
+Generate JSON with these exact fields:
+{
+  "question": "Should... [clear Yes/No policy question, starts with Should]",
+  "debate_summary": "One sentence describing the core disagreement",
+  "comment": "A natural 2-sentence comment to post on Reddit that mentions this is being discussed on Purple and includes the URL. Don't be spammy. Be genuine."
+}
+
+The question must start with "Should" and be a clear policy question that Americans disagree on.`}]
+      })
+    });
+
+    const data = await res.json();
+    let txt = data.content?.[0]?.text || '{}';
+    txt = txt.replace(/```json\n?/g,'').replace(/```/g,'').trim();
+    const parsed = JSON.parse(txt.match(/\{[\s\S]*\}/)?.[0] || '{}');
+
+    const question = parsed.question || '';
+    const summary = parsed.debate_summary || '';
+    const comment = parsed.comment || '';
+    const redditUrl = 'https://reddit.com' + post.permalink;
+    const purpleUrl = 'https://purple-poll.com';
+
+    // Build comment with Purple link
+    const fullComment = comment + '\n\npurple-poll.com — Not left. Not right. Real.';
+
+    return `<div class="card">
+      <div class="card-meta">r/${post.subreddit} · ${post.num_comments} comments · ${Math.round(post.score)} upvotes</div>
+      <div class="card-hed"><a href="${redditUrl}" target="_blank" style="color:#141210">${esc(post.title)}</a></div>
+      <div class="card-debate">${esc(summary)}</div>
+      
+      <div style="font-family:monospace;font-size:8px;letter-spacing:0.08em;text-transform:uppercase;color:#7a736a;margin-bottom:6px">Purple question to post:</div>
+      <div class="purple-q">${esc(question)}</div>
+      
+      <div style="font-family:monospace;font-size:8px;letter-spacing:0.08em;text-transform:uppercase;color:#7a736a;margin-bottom:6px">Draft comment to post on Reddit:</div>
+      <div class="comment-draft" id="comment-${post.id}">${esc(fullComment)}</div>
+      
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn" onclick="copyComment('${post.id}')">Copy Comment</button>
+        <button class="btn sec" onclick="window.open('${redditUrl}','_blank')">Open Thread →</button>
+        <button class="btn sec" onclick="addToPurple('${encodeURIComponent(question)}')">Add to Purple →</button>
+      </div>
+      <div id="status-${post.id}" style="margin-top:6px;height:16px"></div>
+    </div>`;
+
+  }catch(e){
+    return `<div class="card"><div class="error">Could not generate question for: ${esc(post.title)}</div></div>`;
+  }
+}
+
+function copyComment(id){
+  const el = document.getElementById('comment-'+id);
+  navigator.clipboard.writeText(el.textContent).then(()=>{
+    const s = document.getElementById('status-'+id);
+    s.innerHTML = '<span class="copied">✓ Copied to clipboard — paste it in the Reddit thread</span>';
+    setTimeout(()=>s.innerHTML='',3000);
+  });
+}
+
+function addToPurple(encodedQ){
+  const q = decodeURIComponent(encodedQ);
+  window.open('https://purple-poll.com?prefill='+encodeURIComponent(q),'_blank');
+}
+
+function esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
