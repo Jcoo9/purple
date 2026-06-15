@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Purple Publisher Intelligence</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Georgia,serif;background:#f7f4ef;color:#141210;min-height:100vh}
+.hd{border-bottom:3px solid #141210;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;background:#f7f4ef;position:sticky;top:0;z-index:10}
+.hd-logo{font-size:28px;font-weight:900;letter-spacing:-0.02em}
+.hd-tag{font-family:monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#7a736a}
+.wrap{max-width:900px;margin:0 auto;padding:32px 24px}
+.hero{border:2px solid #141210;padding:32px;margin-bottom:32px;background:#fff}
+.hero-eyebrow{font-family:monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#7a736a;margin-bottom:12px}
+.hero-pub{font-size:36px;font-weight:900;line-height:1.1;margin-bottom:8px}
+.hero-meta{font-family:monospace;font-size:9px;color:#7a736a;letter-spacing:0.08em;margin-bottom:16px}
+.hero-lede{font-size:16px;font-style:italic;color:#5a5450;line-height:1.7}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#d4cdc2;border:1px solid #d4cdc2;margin-bottom:32px}
+.stat{background:#f7f4ef;padding:20px;text-align:center}
+.stat-n{font-size:36px;font-weight:900;line-height:1;margin-bottom:4px}
+.stat-l{font-family:monospace;font-size:7px;letter-spacing:0.12em;text-transform:uppercase;color:#7a736a}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px}
+.card{border:1px solid #d4cdc2;padding:20px;background:#fff}
+.card-hd{font-family:monospace;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:#7a736a;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eeeae3}
+.section{margin-bottom:32px}
+.section-hd{font-family:monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#7a736a;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #d4cdc2}
+.bar-row{margin-bottom:14px}
+.bar-label{font-family:Georgia,serif;font-size:13px;font-weight:700;margin-bottom:5px;line-height:1.3}
+.bar-wrap{display:flex;height:8px;background:#eeeae3;overflow:hidden;margin-bottom:3px}
+.bar-yes{background:#1565c0;height:100%}
+.bar-no{background:#c62828;height:100%}
+.bar-meta{display:flex;justify-content:space-between;font-family:monospace;font-size:8px;color:#7a736a}
+.vs-tag{display:inline-block;font-family:monospace;font-size:7px;letter-spacing:0.08em;padding:2px 6px;margin-top:3px}
+.lean-bar{margin-bottom:10px}
+.lean-lbl{font-family:monospace;font-size:8px;letter-spacing:0.08em;text-transform:uppercase;color:#7a736a;margin-bottom:4px}
+.lean-track{height:6px;background:#eeeae3;position:relative}
+.lean-fill{height:100%;position:absolute}
+.lean-pct{font-family:monospace;font-size:9px;font-weight:700;margin-top:2px}
+.tag-chip{display:inline-block;font-family:monospace;font-size:7px;letter-spacing:0.08em;padding:3px 8px;border:1px solid #d4cdc2;margin:2px;cursor:default}
+.insight-box{border-left:3px solid #7b3fa0;padding:12px 14px;background:#faf8fd;margin-bottom:12px}
+.insight-box p{font-family:Georgia,serif;font-size:13px;font-style:italic;color:#3a2a50;line-height:1.6}
+.sparkline{display:flex;align-items:flex-end;gap:2px;height:40px}
+.spark-bar{flex:1;background:#1565c0;border-radius:1px 1px 0 0;min-height:2px}
+.embed-box{background:#141210;color:#f7f4ef;padding:16px;font-family:monospace;font-size:11px;line-height:1.6;word-break:break-all;margin-bottom:8px}
+.btn{background:#141210;color:#f7f4ef;border:none;padding:10px 18px;cursor:pointer;font-family:monospace;font-size:8px;letter-spacing:0.1em;text-transform:uppercase}
+.btn:hover{opacity:0.85}
+.loading{text-align:center;padding:80px;font-family:monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#7a736a}
+.compare-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.compare-lbl{font-family:monospace;font-size:8px;width:90px;flex-shrink:0;color:#7a736a;text-transform:uppercase;letter-spacing:0.06em}
+.compare-track{flex:1;height:6px;background:#eeeae3;position:relative}
+.compare-fill{height:100%;position:absolute;left:0;top:0}
+.compare-pct{font-family:monospace;font-size:9px;font-weight:700;width:32px;text-align:right;flex-shrink:0}
+.biggest-diff{border:2px solid #141210;padding:20px;margin-bottom:16px;background:#fff}
+.biggest-diff-n{font-size:48px;font-weight:900;line-height:1}
+.segment-row{display:flex;gap:16px;margin-bottom:8px}
+.segment{flex:1;padding:10px;background:#f7f4ef;border:1px solid #eeeae3;text-align:center}
+.segment-pct{font-size:22px;font-weight:900;line-height:1;margin-bottom:2px}
+.segment-lbl{font-family:monospace;font-size:7px;letter-spacing:0.08em;text-transform:uppercase;color:#7a736a}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="hd">
+  <div>
+    <div class="hd-logo">Purple</div>
+    <div class="hd-tag">Publisher Intelligence</div>
+  </div>
+  <a href="https://purple-poll.com" style="font-family:monospace;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#141210;text-decoration:none;border-bottom:1px solid #141210">Visit Purple &#8594;</a>
+</div>
+
+<div class="wrap" id="main">
+  <div class="loading">Loading your audience data...</div>
+</div>
+
+<script>
+const SURL='https://snwvxdbgbvloubyphmtw.supabase.co';
+const SKEY='sb_publishable_oCg4DwrNfjpfapVkbnzKnA_EpGNgSnw';
+const ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNud3Z4ZGJnYnZsb3VieXBobXR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3NjQ3NjQsImV4cCI6MjA5MzM0MDc2NH0.Wi6_jXt6Q3QLC9EOuQB_bsqmAEDLjM3358KEoXFkZXQ';
+const sb=supabase.createClient(SURL,SKEY);
+
+const params=new URLSearchParams(window.location.search);
+let PUBLISHER=params.get('id')||params.get('publisher')||'';
+if(!PUBLISHER){const parts=window.location.pathname.split('/');PUBLISHER=parts[parts.length-1]||'';}
+
+function tv(t){return(t.votes_yes||0)+(t.votes_no||0);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function copyEmbed(){
+  var code='<script src="https://purple-poll.com/widget.js" data-publisher="'+PUBLISHER+'" data-count="3"><\/script>';
+  navigator.clipboard.writeText(code).then(function(){
+    document.querySelectorAll('.btn').forEach(function(b){b.textContent='Copied!';});
+    setTimeout(function(){document.querySelectorAll('.btn').forEach(function(b){b.textContent='Copy embed code';});},2000);
+  }).catch(function(){alert(code);});
+}
+
+async function load(){
+  const main=document.getElementById('main');
+  if(!PUBLISHER){
+    main.innerHTML='<div class="loading">No publisher specified.<br><small style="font-family:monospace;font-size:11px;color:#7a736a">Use: purple-poll.com/publisher.html?id=yoursite.com</small></div>';
+    return;
+  }
+
+  try{
+    const [{data:wvotes},{data:topics}]=await Promise.all([
+      sb.from('widget_votes').select('*').eq('publisher',PUBLISHER).order('voted_at',{ascending:false}).limit(1000),
+      sb.from('topics').select('id,question,tags,votes_yes,votes_no,votes_conditional,votes_unsure,yes_alignment').eq('status','live')
+    ]);
+
+    const topicMap={};
+    (topics||[]).forEach(t=>topicMap[t.id]=t);
+
+    const natTot=(topics||[]).reduce((a,t)=>a+tv(t),0);
+    const natYes=(topics||[]).reduce((a,t)=>a+(t.votes_yes||0),0);
+    const natPct=natTot>0?Math.round((natYes/natTot)*100):50;
+
+    if(!wvotes||!wvotes.length){
+      main.innerHTML=`
+        <div class="hero">
+          <div class="hero-eyebrow">Publisher Report</div>
+          <div class="hero-pub">${esc(PUBLISHER)}</div>
+          <p class="hero-lede" style="margin-top:12px">No widget votes yet. Add the embed code below to start collecting audience intelligence.</p>
+        </div>
+        <div class="section">
+          <div class="section-hd">Your embed code</div>
+          <div class="embed-box">&lt;script src="https://purple-poll.com/widget.js" data-publisher="${esc(PUBLISHER)}" data-count="3"&gt;&lt;/script&gt;</div>
+          <button class="btn" onclick="copyEmbed()">Copy embed code</button>
+        </div>`;
+      return;
+    }
+
+    // Core aggregates
+    const total=wvotes.length;
+    const yes=wvotes.filter(v=>v.vote_option==='yes').length;
+    const no=wvotes.filter(v=>v.vote_option==='no').length;
+    const cond=wvotes.filter(v=>v.vote_option==='conditional').length;
+    const unsure=wvotes.filter(v=>v.vote_option==='unsure').length;
+    const yesPct=total>0?Math.round((yes/total)*100):0;
+    const noPct=total>0?Math.round((no/total)*100):0;
+    const condPct=total>0?Math.round((cond/total)*100):0;
+    const unsurePct=total>0?Math.round((unsure/total)*100):0;
+    const diff=yesPct-natPct;
+
+    // By topic
+    const byTopic={};
+    wvotes.forEach(v=>{
+      if(!v.topic_id)return;
+      if(!byTopic[v.topic_id])byTopic[v.topic_id]={yes:0,no:0,cond:0,unsure:0,total:0};
+      byTopic[v.topic_id].total++;
+      if(v.vote_option==='yes')byTopic[v.topic_id].yes++;
+      else if(v.vote_option==='no')byTopic[v.topic_id].no++;
+      else if(v.vote_option==='conditional')byTopic[v.topic_id].cond++;
+      else byTopic[v.topic_id].unsure++;
+    });
+
+    // By tag/category
+    const byTag={};
+    Object.entries(byTopic).forEach(([id,v])=>{
+      const t=topicMap[id];if(!t)return;
+      const tag=(t.tags&&t.tags[0])||'General';
+      if(!byTag[tag])byTag[tag]={yes:0,no:0,total:0};
+      byTag[tag].total+=v.total;
+      byTag[tag].yes+=v.yes;
+      byTag[tag].no+=v.no;
+    });
+
+    // Questions with biggest diff from national
+    const withDiff=Object.entries(byTopic)
+      .map(([id,v])=>{
+        const t=topicMap[id];if(!t||v.total<2)return null;
+        const qYesPct=v.total>0?Math.round((v.yes/v.total)*100):0;
+        const natQ=tv(t)>0?Math.round(((t.votes_yes||0)/tv(t))*100):50;
+        return{id,t,v,qYesPct,natQ,diff:qYesPct-natQ,absDiff:Math.abs(qYesPct-natQ)};
+      })
+      .filter(Boolean)
+      .sort((a,b)=>b.absDiff-a.absDiff);
+
+    const topQuestions=Object.entries(byTopic)
+      .map(([id,v])=>({id,t:topicMap[id],...v}))
+      .filter(x=>x.t)
+      .sort((a,b)=>b.total-a.total)
+      .slice(0,8);
+
+    // Political lean analysis
+    // For each voter who voted Yes: what % also voted No on "conservative" questions
+    // Use yes_alignment to determine political lean
+    // Yes on left-aligned (yes_alignment!='right') = liberal lean
+    // Yes on right-aligned (yes_alignment='right') = conservative lean
+    const voterMap={};
+    wvotes.forEach(v=>{
+      if(!v.topic_id)return;
+      const t=topicMap[v.topic_id];if(!t)return;
+      const sessionId=v.voted_at?v.voted_at.slice(0,13):'x'; // hourly session proxy
+      const key=v.referrer||sessionId;
+      if(!voterMap[key])voterMap[key]={liberal:0,conservative:0,total:0};
+      voterMap[key].total++;
+      const isConservativeAnswer=(t.yes_alignment==='right'&&v.vote_option==='yes')||(t.yes_alignment!=='right'&&v.vote_option==='no');
+      const isLiberalAnswer=(t.yes_alignment!=='right'&&v.vote_option==='yes')||(t.yes_alignment==='right'&&v.vote_option==='no');
+      if(isConservativeAnswer)voterMap[key].conservative++;
+      if(isLiberalAnswer)voterMap[key].liberal++;
+    });
+
+    // Overall political lean from all votes
+    let totalLiberal=0,totalConservative=0,totalAnswered=0;
+    wvotes.forEach(v=>{
+      if(!v.topic_id)return;
+      const t=topicMap[v.topic_id];if(!t)return;
+      totalAnswered++;
+      if((t.yes_alignment!=='right'&&v.vote_option==='yes')||(t.yes_alignment==='right'&&v.vote_option==='no'))totalLiberal++;
+      if((t.yes_alignment==='right'&&v.vote_option==='yes')||(t.yes_alignment!=='right'&&v.vote_option==='no'))totalConservative++;
+    });
+    const liberalPct=totalAnswered>0?Math.round((totalLiberal/totalAnswered)*100):50;
+    const conservativePct=totalAnswered>0?Math.round((totalConservative/totalAnswered)*100):50;
+
+    // Category lean - which topics lean which way
+    const tagLean=Object.entries(byTag)
+      .map(([tag,v])=>({tag,yesPct:v.total>0?Math.round((v.yes/v.total)*100):0,total:v.total}))
+      .filter(x=>x.total>=2)
+      .sort((a,b)=>b.total-a.total);
+
+    // Daily sparkline
+    const byDay={};
+    wvotes.forEach(v=>{const d=v.voted_at?v.voted_at.slice(0,10):'';if(d)byDay[d]=(byDay[d]||0)+1;});
+    const days=Object.entries(byDay).sort((a,b)=>a[0]>b[0]?1:-1).slice(-21);
+    const maxDay=Math.max(...days.map(d=>d[1]),1);
+
+    const firstSeen=wvotes[wvotes.length-1]?.voted_at?.slice(0,10)||'';
+    const lastSeen=wvotes[0]?.voted_at?.slice(0,10)||'';
+
+    // The big insight sentence
+    let biggestDiffQ=withDiff[0];
+    let insightSentence='';
+    if(biggestDiffQ){
+      insightSentence=`Your readers diverge most from the national average on: "<strong>${esc(biggestDiffQ.t.question.slice(0,80))}</strong>" — they say Yes at ${biggestDiffQ.qYesPct}% vs. ${biggestDiffQ.natQ}% nationally (${Math.abs(biggestDiffQ.diff)}pt ${biggestDiffQ.diff>0?'more Yes':'more No'}).`;
+    }
+
+    // Lean descriptor
+    const leanDesc=liberalPct>55?'left-leaning':liberalPct>52?'slightly left-leaning':conservativePct>55?'right-leaning':conservativePct>52?'slightly right-leaning':'politically balanced';
+    const nuanceDesc=condPct>=15?'Your audience shows high political nuance — '+condPct+'% chose "Yes, with conditions" rather than a flat answer.':condPct>=8?condPct+'% voted with conditions, showing a thoughtful audience.':'';
+
+    main.innerHTML=`
+      <!-- Hero -->
+      <div class="hero">
+        <div class="hero-eyebrow">Purple Publisher Intelligence Report</div>
+        <div class="hero-pub">${esc(PUBLISHER)}</div>
+        <div class="hero-meta">First vote: ${firstSeen} &nbsp;&middot;&nbsp; Most recent: ${lastSeen} &nbsp;&middot;&nbsp; ${Object.keys(byTopic).filter(id=>topicMap[id]).length} questions covered</div>
+        <p class="hero-lede">
+          Your audience is <strong>${leanDesc}</strong> and has cast <strong>${total} votes</strong> on Purple.
+          ${Math.abs(diff)<=3?'They track the national average closely across policy questions.':`They lean ${diff>0?'more Yes':'more No'} than the national average by <strong>${Math.abs(diff)} points</strong>.`}
+          ${nuanceDesc}
+        </p>
+      </div>
+
+      <!-- Stats row -->
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-n" style="color:#1565c0">${yesPct}%</div>
+          <div class="stat-l">Say Yes</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n">${total}</div>
+          <div class="stat-l">Total votes</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n" style="color:${diff>2?'#1565c0':diff<-2?'#c62828':'#7a736a'}">${diff>0?'+':''}${diff}pt</div>
+          <div class="stat-l">vs national (${natPct}%)</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n" style="color:#7b3fa0">${condPct}%</div>
+          <div class="stat-l">Nuanced answers</div>
+        </div>
+      </div>
+
+      <!-- Political lean + biggest diff -->
+      <div class="grid2">
+
+        <!-- Political lean -->
+        <div class="card">
+          <div class="card-hd">Political lean of your audience</div>
+          <div style="margin-bottom:16px">
+            <div class="compare-row">
+              <div class="compare-lbl">Liberal</div>
+              <div class="compare-track"><div class="compare-fill" style="width:${liberalPct}%;background:#1565c0"></div></div>
+              <div class="compare-pct" style="color:#1565c0">${liberalPct}%</div>
+            </div>
+            <div class="compare-row">
+              <div class="compare-lbl">Conservative</div>
+              <div class="compare-track"><div class="compare-fill" style="width:${conservativePct}%;background:#c62828"></div></div>
+              <div class="compare-pct" style="color:#c62828">${conservativePct}%</div>
+            </div>
+          </div>
+          <div style="font-family:Georgia,serif;font-size:13px;font-style:italic;color:#7a736a;line-height:1.6">
+            Based on how answers align with left/right party positions across all questions.
+          </div>
+
+          <!-- Answer breakdown -->
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid #eeeae3">
+            <div style="font-family:monospace;font-size:7px;letter-spacing:0.1em;text-transform:uppercase;color:#7a736a;margin-bottom:10px">How they answered</div>
+            <div class="segment-row">
+              <div class="segment">
+                <div class="segment-pct" style="color:#1565c0">${yesPct}%</div>
+                <div class="segment-lbl">Yes</div>
+              </div>
+              <div class="segment">
+                <div class="segment-pct" style="color:#c62828">${noPct}%</div>
+                <div class="segment-lbl">No</div>
+              </div>
+              <div class="segment">
+                <div class="segment-pct" style="color:#7b3fa0">${condPct}%</div>
+                <div class="segment-lbl">Conditional</div>
+              </div>
+              <div class="segment">
+                <div class="segment-pct" style="color:#7a736a">${unsurePct}%</div>
+                <div class="segment-lbl">Unsure</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Biggest divergence from national -->
+        <div class="card">
+          <div class="card-hd">Where your audience diverges most from America</div>
+          ${withDiff.slice(0,3).map(q=>`
+            <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #eeeae3">
+              <div style="font-size:12px;font-weight:700;line-height:1.4;margin-bottom:6px;color:#141210">${esc(q.t.question.slice(0,75))}${q.t.question.length>75?'...':''}</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;height:5px;background:#eeeae3"><div style="width:${q.qYesPct}%;height:100%;background:#141210"></div></div>
+                <span style="font-family:monospace;font-size:8px;font-weight:700">${q.qYesPct}%</span>
+              </div>
+              <div style="font-family:monospace;font-size:7px;color:#7a736a;margin-top:3px">
+                Your audience &nbsp;&middot;&nbsp; National: ${q.natQ}% &nbsp;&middot;&nbsp;
+                <span style="color:${q.diff>0?'#1565c0':'#c62828'};font-weight:700">${Math.abs(q.diff)}pt ${q.diff>0?'more Yes':'more No'}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Key insight -->
+      ${insightSentence?`
+      <div class="insight-box" style="margin-bottom:32px">
+        <p>${insightSentence}</p>
+      </div>`:''}
+
+      <!-- Topic affinity -->
+      ${tagLean.length?`
+      <div class="section">
+        <div class="section-hd">Topic affinity — what your readers engage with most</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+          ${tagLean.map(({tag,yesPct:tp,total:tt})=>`
+            <div style="border:1px solid #d4cdc2;padding:14px;background:#fff">
+              <div style="font-family:monospace;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#7a736a;margin-bottom:6px">${esc(tag)}</div>
+              <div style="font-size:24px;font-weight:900;color:${tp>55?'#1565c0':tp<45?'#c62828':'#141210'};margin-bottom:2px">${tp}% Yes</div>
+              <div style="display:flex;height:4px;background:#eeeae3;margin-bottom:4px"><div style="width:${tp}%;background:${tp>55?'#1565c0':tp<45?'#c62828':'#141210'}"></div></div>
+              <div style="font-family:monospace;font-size:7px;color:#7a736a">${tt} vote${tt!==1?'s':''}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`:''}
+
+      <!-- Daily trend -->
+      ${days.length>2?`
+      <div class="section">
+        <div class="section-hd">Daily engagement (last ${days.length} days)</div>
+        <div class="sparkline" style="margin-bottom:4px">
+          ${days.map(([d,n])=>`<div class="spark-bar" style="height:${Math.round((n/maxDay)*100)}%" title="${d}: ${n} vote${n!==1?'s':''}"></div>`).join('')}
+        </div>
+        <div style="font-family:monospace;font-size:8px;color:#7a736a;display:flex;justify-content:space-between">
+          <span>${days[0][0]}</span><span>${days[days.length-1][0]}</span>
+        </div>
+      </div>`:''}
+
+      <!-- Question by question -->
+      ${topQuestions.length?`
+      <div class="section">
+        <div class="section-hd">Question-by-question — your audience vs. America</div>
+        ${topQuestions.map(({t,yes:qy,no:qn,cond:qc,total:qt})=>{
+          const qYesPct=qt>0?Math.round((qy/qt)*100):0;
+          const qNoPct=qt>0?Math.round((qn/qt)*100):0;
+          const qCondPct=qt>0?Math.round((qc/qt)*100):0;
+          const natQ=tv(t)>0?Math.round(((t.votes_yes||0)/tv(t))*100):50;
+          const qDiff=qYesPct-natQ;
+          return`<div class="bar-row">
+            <div class="bar-label">${esc(t.question.slice(0,90))}${t.question.length>90?'...':''}</div>
+            <div class="bar-wrap">
+              <div class="bar-yes" style="width:${qYesPct}%"></div>
+              <div class="bar-no" style="width:${qNoPct}%"></div>
+            </div>
+            <div class="bar-meta">
+              <span style="color:#1565c0">Yes ${qYesPct}%</span>
+              <span>${qt} votes${qCondPct>0?' &middot; '+qCondPct+'% conditional':''}</span>
+              <span style="color:#c62828">No ${qNoPct}%</span>
+            </div>
+            ${Math.abs(qDiff)>4?
+              `<div style="font-family:monospace;font-size:7px;margin-top:3px">National: ${natQ}% Yes &nbsp;<span style="color:${qDiff>0?'#1565c0':'#c62828'};font-weight:700">${Math.abs(qDiff)}pt ${qDiff>0?'more Yes':'more No'} than average</span></div>`:
+              `<div style="font-family:monospace;font-size:7px;color:#7a736a;margin-top:3px">Tracks national average (${natQ}% Yes)</div>`
+            }
+          </div>`;
+        }).join('')}
+      </div>`:''}
+
+      <!-- Embed -->
+      <div class="section">
+        <div class="section-hd">Your embed code</div>
+        <div style="font-family:monospace;font-size:8px;color:#7a736a;margin-bottom:8px">Paste this one line anywhere on your site</div>
+        <div class="embed-box">&lt;script src="https://purple-poll.com/widget.js" data-publisher="${esc(PUBLISHER)}" data-count="3"&gt;&lt;/script&gt;</div>
+        <button class="btn" onclick="copyEmbed()">Copy embed code</button>
+      </div>
+
+      <!-- Footer -->
+      <div style="text-align:center;padding:32px 0;border-top:1px solid #d4cdc2;margin-top:16px">
+        <div style="font-size:28px;font-weight:900;margin-bottom:4px">Purple</div>
+        <div style="font-family:monospace;font-size:8px;color:#7a736a;margin-bottom:16px">Not left. Not right. Real.</div>
+        <a href="https://purple-poll.com" style="font-family:monospace;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#141210;border-bottom:1px solid #141210;text-decoration:none">Visit Purple &#8594;</a>
+      </div>`;
+
+  }catch(e){
+    document.getElementById('main').innerHTML='<div class="loading">Error: '+e.message+'</div>';
+  }
+}
+
+load();
+</script>
+</body>
+</html>
