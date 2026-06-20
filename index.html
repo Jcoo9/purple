@@ -1958,7 +1958,6 @@ var sidesRead = {};
 
 function markSideRead(topicId, side) {
   if(!sidesRead[topicId]) sidesRead[topicId] = { left: false, right: false };
-  // Opening views shows both sides — mark both read
   sidesRead[topicId].left = true;
   sidesRead[topicId].right = true;
 
@@ -1971,8 +1970,10 @@ function markSideRead(topicId, side) {
   if(checkL) checkL.style.opacity = '1';
   if(checkR) checkR.style.opacity = '1';
 
-  showViews(topicId);
+  // Unlock immediately — don't wait for showViews
   unlockVote(topicId);
+  // Then open views so they actually read
+  showViews(topicId);
 }
 
 function unlockVote(topicId) {
@@ -1981,8 +1982,8 @@ function unlockVote(topicId) {
   const more = document.getElementById('vote-more-'+topicId);
   const banner = document.getElementById('sides-banner-'+topicId);
   if(lock) lock.style.display = 'none';
-  if(main) { main.style.display = ''; main.style.animation = 'fadeIn 0.3s ease'; }
-  if(more) more.style.display = '';
+  if(main) { main.style.display = 'grid'; main.style.animation = 'fadeIn 0.3s ease'; }
+  if(more) more.style.display = 'flex';
   if(banner) banner.innerHTML = '<span style="font-family:monospace;font-size:7px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(100,255,150,0.7)">✓ both sides read — vote below</span>';
 }
 
